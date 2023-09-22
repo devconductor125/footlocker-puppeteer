@@ -6,7 +6,7 @@ import jsdom from "jsdom"
 const { JSDOM } = jsdom
 
 async function scrapePage(url: string, pagenum: number) {
-  const browser = await puppeteer.launch({headless: 'new', executablePath: `C:/Program Files (x86)/Google/Chrome/Application/chrome.exe`})
+  const browser = await puppeteer.launch({headless: false, executablePath: `C:/Users/xiaori/AppData/Local/Google/Chrome/Application/chrome.exe`})
   const page = await browser.newPage()
   let pageSlug = "?currentPage="+pagenum;
 
@@ -19,7 +19,9 @@ async function scrapePage(url: string, pagenum: number) {
   const dom = new JSDOM(data)
   const document = dom.window.document
 
-  const itemList = document.querySelector("div[arial-label='Search Results']").querySelector('.SearchResults').querySelectorAll('ul');
+  const wholePage = document.querySelector("div[arial-label='Search Results']");
+  const searchResult = wholePage.querySelector('.SearchResults');
+  const itemList = searchResult.querySelectorAll('ul')
   if(!itemList) throw new Error("No items found")
 
   const items = itemList.children
@@ -28,20 +30,9 @@ async function scrapePage(url: string, pagenum: number) {
       await scrapeItem(item, ProductType.SHOE);
   }
 
-  // console.log("Finished scraping product data from page")
-
-  // const nextPageUrl = getNextPageUrl(document)
-
-  // console.log("Next page url is " + url + nextPageUrl)
-
   await page.close()
   await browser.close()
 
-  // if(nextPageUrl) {
-  //     return new Option<string>(url + nextPageUrl)
-  // } else {
-  //     return new Option<string>()
-  // }
   let newPageNum = pagenum+1;
   return newPageNum;
 }
@@ -55,7 +46,7 @@ async function scrapeItem(item: Element, productType: ProductType) {
   const itemPageLink = "https://www.footlocker.com"+itemLink.getAttribute("href");
 
   // Open new page
-  const browser = await puppeteer.launch({headless: 'new', executablePath: `C:/Program Files (x86)/Google/Chrome/Application/chrome.exe`})
+  const browser = await puppeteer.launch({headless: false, executablePath: `C:/Users/xiaori/AppData/Local/Google/Chrome/Application/chrome.exe`})
   const page = await browser.newPage()
   await page.goto(itemPageLink)
   await page.setViewport({width: 1080, height: 1024})
@@ -100,8 +91,12 @@ async function scrapeItem(item: Element, productType: ProductType) {
 
 async function getAllPage(url: string) {
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: false,
     executablePath: `C:/Program Files (x86)/Google/Chrome/Application/chrome.exe`,
+    // args:['--disable-extensions-except=C:/Users/777/AppData/Local/Google/Chrome/User Data/Default/Extensions/fdcgdnkidjaadafnichfpabhfomcebme/9.0.1_0',
+    //       '--load-extension=C:/Users/777/AppData/Local/Google/Chrome/User Data/Default/Extensions/fdcgdnkidjaadafnichfpabhfomcebme/9.0.1_0',
+    //       '--user-data-dir=%userprofile%\\AppData\\Local\\Chromium\\User Data\\Default'
+    //   ]
   });
   const page = await browser.newPage();
 
@@ -109,13 +104,16 @@ async function getAllPage(url: string) {
     waitUntil: "load",
     timeout: 0,
   });
+  await page.waitForSelector("a[aria-label='Go to next page']");
+
   const data = await page.content()
   const dom = new JSDOM(data)
   const document = dom.window.document
   let nextButton = document.querySelectorAll("a[aria-label='Go to next page']");
-  const lastPageElement = nextButton.parentElement.previousElementSibling;
+  const lastPageElement = nextButton.parentNode.previousSibling;
   console.log("lastElement: ", lastPageElement)
   return parseInt(lastPageElement.innerText);
+
 }
 
 async function scrapeProduct(url: string): Promise<void> {
